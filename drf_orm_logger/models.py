@@ -9,7 +9,7 @@ User = get_user_model()
 
 
 class RequestLogRecord(models.Model):
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата", db_index=True)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, related_name="+", null=True, verbose_name="Пользователь")
     ip = models.GenericIPAddressField(verbose_name="IP")
     method = models.CharField(max_length=7, verbose_name="Метод")
@@ -43,7 +43,7 @@ class RequestLogChange(models.Model):
         )
     )
 
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата", db_index=True)
     record = models.ForeignKey(
         RequestLogRecord, on_delete=models.CASCADE, related_name="changes", verbose_name="Запись", null=True
     )

@@ -2,12 +2,14 @@ import json
 from collections import OrderedDict
 from difflib import SequenceMatcher
 from typing import TYPE_CHECKING, Union
-
+from datetime import timedelta, date, datetime, time
 from dateutil.parser import parse
 from django.apps import apps
 from django.contrib import admin
 from django.template.loader import render_to_string
 from django.utils.html import escape
+from django.utils import timezone
+from django.shortcuts import redirect
 
 from .models import RequestLogChange, RequestLogRecord
 
@@ -98,10 +100,57 @@ class ReadOnlyModelAdminMixin:
         return False
 
 
+def week_start_for(d: date) -> date:
+    # понедельник (iso Monday=1)
+    return d - timedelta(days=d.isoweekday() - 1)
+
+class WeekListFilter(admin.SimpleListFilter):
+    title = "неделя"
+    parameter_name = "week"
+
+    def lookups(self, request, model_admin):
+        qs = model_admin.get_queryset(request)
+        dates = qs.dates("created_at", "week", order="DESC")
+        lookups = []
+        for d in dates:
+            week_start = d                 # понедельник
+            week_end = d + timedelta(days=6)
+            label = f"{week_start.strftime('%d.%m.%Y')} – {week_end.strftime('%d.%m.%Y')}"
+            lookups.append((week_start.isoformat(), label))
+        return lookups
+
+    def queryset(self, request, queryset):
+        if self.value():
+            start = date.fromisoformat(self.value())
+            end = start + timedelta(days=7)
+
+            # индекс-дружелюбно: aware и полуоткрытый интервал [start; end)
+            start_dt = timezone.make_aware(datetime.combine(start, time.min))
+            end_dt   = timezone.make_aware(datetime.combine(end,   time.min))
+            return queryset.filter(created_at__gte=start_dt, created_at__lt=end_dt)
+        return queryset
+
+
+class DateRedirectMixin:
+    show_full_result_count = False
+    def changelist_view(self, request, extra_context=None):
+        if "week" not in request.GET:
+            today = timezone.localdate()
+            ws = week_start_for(today).isoformat()
+            params = request.GET.copy()
+            params["week"] = ws
+            for k in list(params.keys()):
+                if k.startswith("created_at__"):
+                    params.pop(k, None)
+            return redirect(f"{request.path}?{params.urlencode()}")
+
+        return super().changelist_view(request, extra_context=extra_context)
+
+
 @admin.register(RequestLogRecord)
-class RequestLogRecordModelAdmin(ReadOnlyModelAdminMixin, admin.ModelAdmin):
+class RequestLogRecordModelAdmin(DateRedirectMixin, ReadOnlyModelAdminMixin, admin.ModelAdmin):
     list_display = ("created_at", "user", "ip", "referer", "method", "status_code", "url")
-    list_filter = ("method", "status_code", "user")
+    list_filter = (WeekListFilter, "method", "status_code", "user")
     list_select_related = ("user",)
     search_fields = (
         "user__email",
@@ -111,8 +160,6 @@ class RequestLogRecordModelAdmin(ReadOnlyModelAdminMixin, admin.ModelAdmin):
         "url",
         "changes__instance",
     )
-    date_hierarchy = "created_at"
-
     inlines = (RequestLogChangeModelAdminInline,)
 
     def get_queryset(self, request):
@@ -120,5 +167,5 @@ class RequestLogRecordModelAdmin(ReadOnlyModelAdminMixin, admin.ModelAdmin):
 
 
 @admin.register(RequestLogChange)
-class RequestLogChangeModelAdmin(admin.ModelAdmin, RequestLogChangeModelAdminMixin):
-    pass
+class RequestLogChangeModelAdmin(DateRedirectMixin, admin.ModelAdmin, RequestLogChangeModelAdminMixin):
+    list_filter = (WeekListFilter,)
