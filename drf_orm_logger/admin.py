@@ -112,7 +112,7 @@ class WeekListFilter(admin.SimpleListFilter):
         # 1) один запрос: только самая поздняя created_at
         last_ts = (
             model_admin.get_queryset(request)
-            .order_by("-created_at")
+            .order_by("created_at")
             .values_list("created_at", flat=True)
             .first()
         )
