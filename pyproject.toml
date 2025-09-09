@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "drf-orm-logger"
-version = "0.1.8"
+version = "1.0.0"
 description = ""
 authors = ["Pavel Merkulov <merkulov0pavel@gmail.com>"]
 readme = "README.md"
