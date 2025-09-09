@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "drf-orm-logger"
+version = "0.1.8"
+description = ""
+authors = ["Pavel Merkulov <merkulov0pavel@gmail.com>"]
+readme = "README.md"
+packages = [{include = "drf_orm_logger"}]
+
+[tool.poetry.dependencies]
+python = ">=3.8.5"
+django = ">=4.0.0"
+djangorestframework = ">=3.9.0"
+python-dateutil = ">=2.8"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

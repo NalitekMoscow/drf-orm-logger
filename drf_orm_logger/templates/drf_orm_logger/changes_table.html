@@ -1,0 +1,29 @@
+<table class="changes-table">
+    {% for name, changes in fields.items %}
+        <tr>
+            <th>{{ changes.label }} ({{ name }})</th>
+            <td>
+                <div class="changes-tabs">
+                    <div class="changes-tabs-labels">
+                        {% if changes.diff %}
+                            <div class="changes-tabs-label">Разница</div>
+                        {% endif %}
+                        <div class="changes-tabs-label">До/после</div>
+                    </div>
+                    <div class="changes-tabs-contents">
+                        {% if changes.diff %}
+                            <div class="changes-tabs-content">
+                                <code class="diff">{{ changes.diff|safe }}</code>
+                            </div>
+                        {% endif %}
+                        <div class="changes-tabs-content">
+                            <code class="diff diff-delete">{% if changes.old != '' %}{{ changes.old }}{% else %}&nbsp;{% endif %}</code>
+                            <br>
+                            <code class="diff diff-insert">{% if changes.new != '' %}{{ changes.new }}{% else %}&nbsp;{% endif %}</code>
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    {% endfor %}
+</table>

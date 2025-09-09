@@ -1,0 +1,91 @@
+.changes-table {
+    max-width: 100%;
+}
+
+.changes-table th, .changes-table td {
+    padding-bottom: 1em;
+}
+
+.changes-table th {
+    padding-right: 1em;
+}
+
+
+code.diff {
+    display:     inline-block;
+    padding:     .125em 1ex;
+    font-size:   1em;
+    line-height: 1.5em;
+    color:       black;
+}
+
+.diff-delete {
+    background-color: #f1c0c0;
+}
+
+.diff-insert {
+    background-color: #bef5cb;
+}
+
+
+.diff-replace .before {
+    background-color: #f1c0c0;
+}
+
+.diff-replace .after {
+    background-color: #bef5cb;
+}
+
+.diff-replace .before {
+    display: none;
+}
+
+code.diff:hover .diff-replace .before {
+    display: inline;
+}
+
+code.diff:hover .diff-replace .after {
+    display: none;
+}
+
+
+.changes-tabs-contents {
+    overflow:      hidden;
+    border-radius: 0 3px 3px 3px;
+    border:        1px solid #cccccc;
+}
+
+.changes-tabs-labels {
+    position:        relative;
+    bottom:          -1px;
+    display:         none;
+    flex-wrap:       wrap;
+    justify-content: flex-start;
+}
+
+.changes-tabs-labels.active {
+    display: flex;
+}
+
+.changes-tabs-label {
+    margin-right:     .5em;
+    padding:          .5em 1em;
+    border:           1px solid #cccccc;
+    border-bottom:    none;
+    border-radius:    3px 3px 0 0;
+    background-color: rgba(0, 0, 0, .015);
+    cursor:           pointer;
+}
+
+.changes-tabs-label.active {
+    background-color: #fafafa;
+}
+
+.changes-tabs-content {
+    display:    none;
+    background: #fafafa;
+}
+
+.changes-tabs-content.active {
+    display: block;
+}

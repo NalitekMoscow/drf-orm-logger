@@ -1,0 +1,3 @@
+CHANGE_TYPE_CREATE = "create"
+CHANGE_TYPE_UPDATE = "update"
+CHANGE_TYPE_DELETE = "delete"
