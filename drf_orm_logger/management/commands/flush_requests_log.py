@@ -38,8 +38,9 @@ class Command(BaseCommand):
         filters = Q()
         for model in cls.get_models_to_keep():
             fields_filter = Q()
-            for field in model.permanent_log_fields:
-                fields_filter |= Q(changes__fields__icontains=f'"{field}":')
+            if hasattr(model, "permanent_log_fields"):
+                for field in model.permanent_log_fields:
+                    fields_filter |= Q(changes__fields__icontains=f'"{field}":')
             filters |= Q(changes__instance__icontains=model.__name__) & fields_filter
 
         return RequestLogRecord.objects.exclude(filters)
@@ -49,8 +50,9 @@ class Command(BaseCommand):
         filters = Q()
         for model in cls.get_models_to_keep():
             fields_filter = Q()
-            for field in model.permanent_log_fields:
-                fields_filter |= Q(fields__icontains=f'"{field}":')
+            if hasattr(model, "permanent_log_fields"):
+                for field in model.permanent_log_fields:
+                    fields_filter |= Q(fields__icontains=f'"{field}":')
             filters |= Q(instance__icontains=model.__name__) & fields_filter
 
         return RequestLogChange.objects.exclude(filters)

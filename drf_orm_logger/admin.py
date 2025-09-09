@@ -109,22 +109,38 @@ class WeekListFilter(admin.SimpleListFilter):
     parameter_name = "week"
 
     def lookups(self, request, model_admin):
-        qs = model_admin.get_queryset(request)
-        dates = qs.dates("created_at", "week", order="DESC")
-        lookups = []
-        for d in dates:
-            week_start = d                 # понедельник
-            week_end = d + timedelta(days=6)
-            label = f"{week_start.strftime('%d.%m.%Y')} – {week_end.strftime('%d.%m.%Y')}"
-            lookups.append((week_start.isoformat(), label))
-        return lookups
+        # 1) один запрос: только самая поздняя created_at
+        last_ts = (
+            model_admin.get_queryset(request)
+            .order_by("-created_at")
+            .values_list("created_at", flat=True)
+            .first()
+        )
+        if not last_ts:
+            return []
+
+        # 2) переводим в локальную дату
+        last_date = timezone.localdate(last_ts)
+
+        # 3) старт/финиш интервала по неделям
+        ws_today = week_start_for(timezone.localdate())
+        ws_last  = week_start_for(last_date)
+
+        # 4) строим непрерывные недели от сегодня до последней с данными
+        items = []
+        ws = ws_today
+        while ws >= ws_last:
+            we = ws + timedelta(days=6)
+            label = f"{ws:%d.%m.%Y} – {we:%d.%m.%Y}"
+            items.append((ws.isoformat(), label))
+            ws -= timedelta(weeks=1)
+
+        return items
 
     def queryset(self, request, queryset):
         if self.value():
             start = date.fromisoformat(self.value())
             end = start + timedelta(days=7)
-
-            # индекс-дружелюбно: aware и полуоткрытый интервал [start; end)
             start_dt = timezone.make_aware(datetime.combine(start, time.min))
             end_dt   = timezone.make_aware(datetime.combine(end,   time.min))
             return queryset.filter(created_at__gte=start_dt, created_at__lt=end_dt)
