@@ -1,13 +1,13 @@
-from typing import Iterator
+import logging
+from datetime import timedelta
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
-from django.db.models import Q, QuerySet
 from django.utils import timezone
 
 from ...models import RequestLogChange, RequestLogRecord
-from ...signals import get_models_to_log
 
+logger = logging.getLogger("default")
 
 class Command(BaseCommand):
     help = "Очистить лог http-запросов от устаревших записей"
@@ -20,43 +20,23 @@ class Command(BaseCommand):
         if days is None:
             days = getattr(settings, "REQUESTS_LOGGER", {}).get("FLUSH_DAYS", 14)
 
-        deleted_request_records = (
-            self.get_request_log_record_queryset_to_delete()
-            .filter(created_at__lte=timezone.now() - timezone.timedelta(days=days))
-            .delete()
-        )
-        deleted_changes = (
-            self.get_request_log_change_queryset_to_delete()
-            .filter(created_at__lte=timezone.now() - timezone.timedelta(days=days))
-            .delete()
-        )
-        self.stdout.write(f"Удалено записей изменений {deleted_request_records[0]}")
-        self.stdout.write(f"Удалено записей изменений {deleted_changes[0]}")
+        self._iteration_destroy(days=days, model=RequestLogRecord)
+        self._iteration_destroy(days=days, model=RequestLogChange)
 
-    @classmethod
-    def get_request_log_record_queryset_to_delete(cls) -> QuerySet:
-        filters = Q()
-        for model in cls.get_models_to_keep():
-            fields_filter = Q()
-            if hasattr(model, "permanent_log_fields"):
-                for field in model.permanent_log_fields:
-                    fields_filter |= Q(changes__fields__icontains=f'"{field}":')
-            filters |= Q(changes__instance__icontains=model.__name__) & fields_filter
+    def _iteration_destroy(self, days, model):
+        days_ago = timezone.now() - timedelta(days=days)
+        six_hours = timedelta(hours=6)
 
-        return RequestLogRecord.objects.exclude(filters)
+        current_start = days_ago - timedelta(days=3)
+        current_end = current_start + six_hours
 
-    @classmethod
-    def get_request_log_change_queryset_to_delete(cls) -> QuerySet:
-        filters = Q()
-        for model in cls.get_models_to_keep():
-            fields_filter = Q()
-            if hasattr(model, "permanent_log_fields"):
-                for field in model.permanent_log_fields:
-                    fields_filter |= Q(fields__icontains=f'"{field}":')
-            filters |= Q(instance__icontains=model.__name__) & fields_filter
+        while current_end <= days_ago:
+            deleted_count = model.objects.filter(
+                created_at__gte=current_start,
+                created_at__lt=current_end
+            ).delete()[0]
 
-        return RequestLogChange.objects.exclude(filters)
+            logger.info(f"Deleted {deleted_count} records from {current_start} to {current_end}")
 
-    @staticmethod
-    def get_models_to_keep() -> Iterator:
-        return filter(lambda model: hasattr(model, "permanent_log_fields"), get_models_to_log())
+            current_start = current_end
+            current_end = current_start + six_hours
